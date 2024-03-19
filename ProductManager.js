@@ -1,7 +1,27 @@
+const fs = require('fs');
+
 class ProductManager {
-    constructor() {
-        this.products = [];
-        this.idCounter = 1;
+    constructor(filePath) {
+        this.path = filePath;
+        this.loadProducts();
+    }
+
+    loadProducts() {
+        try {
+            const data = fs.readFileSync(this.path, 'utf8');
+            this.products = JSON.parse(data);
+        } catch (err) {
+            console.error('Error loading products:', err);
+            this.products = [];
+        }
+    }
+
+    saveProducts() {
+        try {
+            fs.writeFileSync(this.path, JSON.stringify(this.products, null, 2));
+        } catch (err) {
+            console.error('Error saving products:', err);
+        }
     }
 
     addProduct(product) {
@@ -16,8 +36,9 @@ class ProductManager {
             return;
         }
 
-        product.id = this.idCounter++;
+        product.id = this.products.length > 0 ? this.products[this.products.length - 1].id + 1 : 1;
         this.products.push(product);
+        this.saveProducts();
     }
 
     getProducts() {
@@ -31,10 +52,32 @@ class ProductManager {
         }
         return product;
     }
+
+    updateProduct(id, updatedFields) {
+        const index = this.products.findIndex(p => p.id === id);
+        if (index !== -1) {
+            this.products[index] = { ...this.products[index], ...updatedFields };
+            this.saveProducts();
+        } else {
+            console.error("Producto no encontrado.");
+        }
+    }
+
+    deleteProduct(id) {
+        const index = this.products.findIndex(p => p.id === id);
+        if (index !== -1) {
+            this.products.splice(index, 1);
+            this.saveProducts();
+        } else {
+            console.error("Producto no encontrado.");
+        }
+    }
 }
 
-const productManager = new ProductManager();
+const productManager = new ProductManager('products.json');
 
+// Prueba en consola
+console.log("Agregando productos...");
 productManager.addProduct({
     title: "Producto 1",
     description: "Descripción del producto 1",
@@ -53,6 +96,19 @@ productManager.addProduct({
     stock: 15
 });
 
+console.log("Todos los productos:");
 console.log(productManager.getProducts());
+
+console.log("Actualizando producto con ID 1...");
+productManager.updateProduct(1, { price: 12 });
+
+console.log("Producto actualizado:");
 console.log(productManager.getProductById(1));
-console.log(productManager.getProductById(3));
+
+console.log("Eliminando producto con ID 2...");
+productManager.deleteProduct(2);
+
+console.log("Productos después de eliminar:");
+console.log(productManager.getProducts());
+
+module.exports = ProductManager;
